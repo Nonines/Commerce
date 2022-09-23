@@ -1,0 +1,24 @@
+<!-- Template for each Individual listing: -->
+
+{% extends "auctions/layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+
+    <div>
+        <h3>{{ listing.title }}</h3>
+        {{ listing.description }}
+    </div>
+
+    <div>
+        <img style="width: 200px; height: 200px;" src="{{ listing.image }}" alt="image">
+    </div>
+
+    <div>Seller: {{ listing.seller }}</div>
+
+    <div>Starting Bid: {{ listing.starting_bid }}$</div>
+
+    <div>Category: {{ listing.category }}</div>
+
+{% endblock %}

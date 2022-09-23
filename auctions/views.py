@@ -4,13 +4,33 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User
+from .models import User, Listing
 
 
+# Default page:
 def index(request):
-    return render(request, "auctions/index.html")
+    # When this view is called, retrieve all objects(data in database fields)
+    # from the Listing table by constructing a QuerySet, and passing it as
+    # context to the rendered template
+    listings = Listing.objects.all()
+
+    return render(request,
+                  "auctions/index.html", {"listings": listings})
 
 
+# View for each Individual listing:
+def item(request, item_id):
+    # This query set retrives a specific Listing (in database table 'Listing')
+    # that corresponds to the primary key of the object in the database
+    listing = Listing.objects.get(pk=item_id)
+    item_name = listing.title
+
+    return render(request,
+                  "auctions/listing.html",
+                  {"title": item_name, "listing": listing})
+
+
+# User Authentication:
 def login_view(request):
     if request.method == "POST":
 
