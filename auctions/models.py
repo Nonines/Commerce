@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -16,12 +17,14 @@ class Bid(models.Model):
 
 # Auction listing model:
 class Listing(models.Model):
-    seller = models.ForeignKey(User, on_delete=models.CASCADE,
-                               related_name="goods")
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL,
+                               on_delete=models.CASCADE,
+                               related_name="own_goods")
+
     title = models.CharField(max_length=32)
     description = models.TextField()
     starting_bid = models.IntegerField()
-    image = models.URLField(null=True, blank=True)
+    image = models.URLField(default="shorturl.at/KM139")
     category = models.CharField(max_length=24, null=True, blank=True)
 
     def __str__(self) -> str:
@@ -29,3 +32,5 @@ class Listing(models.Model):
 
 
 # and one for comments made on auction listings.
+
+# Watchlist model:
