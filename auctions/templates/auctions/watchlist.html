@@ -1,0 +1,19 @@
+<!-- Template for watchlisted items -->
+
+{% extends "auctions/layout.html" %}
+
+{% block title %}Watchlist{% endblock %}
+
+{% block body %}
+
+<!-- Empty watchlist message -->
+<h6>{{ message }}</h6>
+
+<ul>
+    {% for listing in watchlist %}
+        <li><a href="{% url 'listing' item_id=listing.id %}">{{ listing }}</a>
+        </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

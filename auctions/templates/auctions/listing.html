@@ -21,4 +21,14 @@
 
     <div>Category: {{ listing.category }}</div>
 
+    <hr>
+    {% if listing not in watchlist %}
+        <div>
+            <form action="{% url 'watchlist' %}" method="post">
+                {% csrf_token %}
+                <input style="color: blue;" type="submit" value="Add to wishlist">
+            </form>
+        </div>
+    {% endif %}
+
 {% endblock %}

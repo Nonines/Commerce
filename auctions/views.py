@@ -5,7 +5,9 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, Listing
+from django.core.exceptions import ObjectDoesNotExist
+
+from .models import User, Listing, Watchlist
 from .forms import ListingForm
 
 
@@ -50,6 +52,39 @@ def create_item(request):
                   "auctions/create_listing.html", {"form": form})
 
 
+# View for watchlists
+@login_required(login_url="login")
+def watchlist(request):
+    # Get the current user's instance
+    user_id = request.user.id
+    current_user = User.objects.get(pk=user_id)
+
+    if request.method == "POST":
+        print(request.POST)
+        return render(request, "auctions/watchlist.html")
+
+    # If it is a get request, get the current user's Watchlist
+    else:
+        try:
+            user_watchlist = Watchlist.objects.get(user=current_user)
+
+        # Adds a watchlist field for the user in the database
+        except ObjectDoesNotExist:
+            try:
+                # And displays a message for the user
+                Watchlist.objects.create(user=current_user)
+                return render(request, "auctions/watchlist.html",
+                              {"message": "Watchlist is empty!"})
+            except IntegrityError:
+                print("Integrity error")
+                return render(request, "auctions/watchlist.html")
+
+        # If there are no errors, display all the items in the user's wishlist
+        watchlist_items = user_watchlist.listings.all()
+        return render(request, "auctions/watchlist.html",
+                      {"watchlist": watchlist_items})
+
+
 # Default page (displays all the listings):
 def index(request):
     # When this view is called, retrieve all objects(data in database fields)
@@ -70,7 +105,7 @@ def item(request, item_id):
 
     return render(request,
                   "auctions/listing.html",
-                  {"title": item_name, "listing": listing})
+                  {"title": item_name, "listing": listing, "watchlist": ""})
 
 
 # User Authentication:
