@@ -24,7 +24,7 @@ class Listing(models.Model):
     title = models.CharField(max_length=32)
     description = models.TextField()
     starting_bid = models.IntegerField()
-    image = models.URLField(default="shorturl.at/blnQZ")
+    image = models.URLField()
     category = models.CharField(max_length=24, null=True, blank=True)
 
     def __str__(self) -> str:
@@ -37,6 +37,6 @@ class Listing(models.Model):
 class Watchlist(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              on_delete=models.CASCADE,
-                             related_name="watchlist_owner")
+                             related_name="watchlist_owned")
     listings = models.ManyToManyField(Listing,
                                       related_name="watchlist_item")

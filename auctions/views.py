@@ -59,8 +59,16 @@ def watchlist(request):
     user_id = request.user.id
     current_user = User.objects.get(pk=user_id)
 
+    # get the current user's watchlist
+    watchlist = current_user.watchlist_owned.get()
+    print(watchlist)
+
     if request.method == "POST":
-        print(request.POST)
+        form = request.POST
+        if form["state"] == "Add":
+            pass
+        elif form["state"] == "Remove":
+            pass
         return render(request, "auctions/watchlist.html")
 
     # If it is a get request, get the current user's Watchlist
@@ -103,9 +111,17 @@ def item(request, item_id):
     listing = Listing.objects.get(pk=item_id)
     item_name = listing.title
 
-    return render(request,
-                  "auctions/listing.html",
-                  {"title": item_name, "listing": listing, "watchlist": ""})
+    # Gets the current user and items in their watchlist
+    user_id = request.user.id
+    current_user = User.objects.get(pk=user_id)
+    user_watchlist = Watchlist.objects.get(user=current_user)
+    watchlist_items = user_watchlist.listings.all()
+
+    # Displays the listing's page
+    return render(request, "auctions/listing.html",
+                  {"title": item_name,
+                   "listing": listing,
+                   "watchlist": watchlist_items})
 
 
 # User Authentication:
