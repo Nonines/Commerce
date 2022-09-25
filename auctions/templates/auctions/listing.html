@@ -2,7 +2,7 @@
 
 {% extends "auctions/layout.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ listing.title }}{% endblock %}
 
 {% block body %}
 
@@ -22,18 +22,27 @@
     <div>Category: {{ listing.category }}</div>
 
     <hr>
-    <div>
-        <form action="{% url 'watchlist' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="item_id" id="item_id" value="{{ listing.id }}">
-            {% if listing not in watchlist %}
-                <input style="color: blue;" type="submit" value="Add to wishlist">
-                <input type="hidden" name="state" id="state" value="Add">
-            {% else %}
-                <input style="color: red;" type="submit" value="Remove from wishlist">
-                <input type="hidden" name="state" id="state" value="Remove">
-            {% endif %}
-        </form>
-    </div>
+
+    <!-- If the Listing's owner is the current user,
+        the watchlist form will not be rendered. -->
+    {% if listing.seller != user %}
+        <div>
+            <form action="{% url 'watchlist' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" id="item_id" value="{{ listing.id }}">
+
+                <!-- Picks which inputs to render, based on whether the
+                    Listing can be found in the current user's Watchlist -->
+                {% if listing not in watchlist %}
+                    <input style="color: blue;" type="submit" value="Add to watchlist">
+                    <input type="hidden" name="state" id="state" value="Add">
+                {% else %}
+                    <input style="color: red;" type="submit" value="Remove from watchlist">
+                    <input type="hidden" name="state" id="state" value="Remove">
+                {% endif %}
+            </form>
+        </div>
+    {% endif %}
+
 
 {% endblock %}

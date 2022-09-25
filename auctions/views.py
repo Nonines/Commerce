@@ -5,7 +5,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from django.core.exceptions import ObjectDoesNotExist
+# from django.core.exceptions import ObjectDoesNotExist
 
 from .models import User, Listing, Watchlist
 from .forms import ListingForm
@@ -24,20 +24,22 @@ def index(request):
 
 # View for each Individual listing:
 def item(request, item_id):
+
     # This query set retrives a specific Listing (in database table 'Listing')
     # that corresponds to the primary key of the object in the database
     listing = Listing.objects.get(pk=item_id)
-    item_name = listing.title
 
-    # Gets the current user and items in their watchlist
+    # Gets the current user
     user_id = request.user.id
     current_user = User.objects.get(pk=user_id)
+
+    # Gets the items in the user's watchlist
     user_watchlist = Watchlist.objects.get(user=current_user)
     watchlist_items = user_watchlist.listings.all()
 
     # Displays the listing's page
     return render(request, "auctions/listing.html",
-                  {"title": item_name,
+                  {"user": current_user,
                    "listing": listing,
                    "watchlist": watchlist_items})
 
@@ -45,13 +47,16 @@ def item(request, item_id):
 # View for creating a new listing
 @login_required(login_url="login")
 def create_item(request):
+
     # if this is a post request we need to process the form data
     if request.method == "POST":
+
         # create a form instance and populate it with data from the request
         form = ListingForm(request.POST)
 
         # check whether the form instance is valid
         if form.is_valid():
+
             # if it is, retrieve the cleaned data
             title = form.cleaned_data["title"]
             desc = form.cleaned_data["description"]
@@ -86,7 +91,8 @@ def create_item(request):
 # View for watchlists
 @login_required(login_url="login")
 def watchlist(request):
-    # Get the current user's instance
+
+    # Get the currently logged-in user
     user_id = request.user.id
     current_user = User.objects.get(pk=user_id)
 
@@ -96,7 +102,7 @@ def watchlist(request):
     # If it is a post request:
     if request.method == "POST":
 
-        # Collect data from the post
+        # Collect data from the post, including the item being added
         form = request.POST
         item_id = form["item_id"]
         current_item = Listing.objects.get(pk=item_id)
@@ -107,30 +113,13 @@ def watchlist(request):
         elif form["state"] == "Remove":
             user_watchlist.listings.remove(current_item)
 
-        # Finally display all the watchlist items
-        watchlist_items = user_watchlist.listings.all()
+        # Refresh the current Listing's page
         return item(request, item_id)
 
-    # If it is a get request, get the current user's Watchlist
-    else:
-        try:
-            user_watchlist = Watchlist.objects.get(user=current_user)
-
-        # Adds a watchlist field for the user in the database
-        except ObjectDoesNotExist:
-            try:
-                # And displays a message for the user
-                Watchlist.objects.create(user=current_user)
-                return render(request, "auctions/watchlist.html",
-                              {"message": "Watchlist is empty!"})
-            except IntegrityError:
-                print("Integrity error")
-                return render(request, "auctions/watchlist.html")
-
-        # If there are no errors, display all the items in the user's wishlist
-        watchlist_items = user_watchlist.listings.all()
-        return render(request, "auctions/watchlist.html",
-                      {"watchlist": watchlist_items})
+    # If it's a get request, display the Watchlist page
+    watchlist_items = user_watchlist.listings.all()
+    return render(request, "auctions/watchlist.html",
+                  {"watchlist": watchlist_items})
 
 
 # User Authentication:
@@ -180,6 +169,13 @@ def register(request):
             return render(request, "auctions/register.html", {
                 "message": "Username already taken."
             })
+
+        # Create a Watchlist field in the database for every new user
+        try:
+            Watchlist.objects.create(user=user)
+        except IntegrityError:
+            print("Integrity error")
+
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
     else:
