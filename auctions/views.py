@@ -23,7 +23,7 @@ def index(request):
 
 
 # View for each Individual listing:
-def item(request, item_id):
+def listing(request, item_id):
 
     # This query set retrives a specific Listing (in database table 'Listing')
     # that corresponds to the primary key of the object in the database
@@ -114,7 +114,7 @@ def watchlist(request):
             user_watchlist.listings.remove(current_item)
 
         # Refresh the current Listing's page
-        return item(request, item_id)
+        return listing(request, item_id)
 
     # If it's a get request, display the Watchlist page
     watchlist_items = user_watchlist.listings.all()

@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 
 
+# User model:
 class User(AbstractUser):
     pass
 
@@ -10,9 +11,15 @@ class User(AbstractUser):
         return self.username
 
 
-# one for bids,
+# Bidding model:
 class Bid(models.Model):
+    listing = models.CharField()
+    seller = models.CharField()
     starting_bid = models.IntegerField()
+
+    first_offer = models.IntegerField(null=True, blank=True)
+    new_offer = models.IntegerField()
+    offer_count = models.IntegerField()
 
 
 # Auction listing model:
@@ -39,4 +46,4 @@ class Watchlist(models.Model):
                              on_delete=models.CASCADE,
                              related_name="watchlist_owned")
     listings = models.ManyToManyField(Listing,
-                                      related_name="watchlist_item")
+                                      related_name="watchlist_in")
