@@ -17,9 +17,18 @@
 
     <div>Seller: {{ listing.seller }}</div>
 
-    <div>Starting Bid: {{ listing.starting_bid }}$</div>
-
     <div>Category: {{ listing.category }}</div>
+
+    <div>Starting Bid: {{ bid.starting_bid }}$</div>
+
+    <div>Latest bid: {{ bid.offer }}$</div>
+
+    <div>
+        {{ bid.offer_count }} bid(s) so far.
+        {% if user == bid.bidder %}
+            <div>Your bid is the current bid.</div>
+        {% endif %}
+    </div>
 
     <!-- Watchlist -->
     <hr>
@@ -44,17 +53,17 @@
             </form>
         </div>
 
+        <!-- Bidding -->
+        <hr>
+
         <div>
+            {{ message }}
             <form action="{% url 'listing' listing.id %}" method="post">
                 {% csrf_token %}
-                {{ message }}
                 {{ form }}
                 <input type="submit" value="Make a bid">
             </form>
         </div>
     {% endif %}
-
-    <!-- Bidding -->
-
 
 {% endblock %}

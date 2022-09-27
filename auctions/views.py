@@ -48,79 +48,79 @@ def listing(request, item_id):
 
             # And the other parameters for the bid instance
             price = listing.starting_bid   # starting bid
-            listing_id = listing.id        # item's id
             seller_id = listing.seller.id  # item's seller
 
             # Check if this is the first bid request
             try:
-                Bid.objects.get(listing_id=listing_id)
+                current_bid = Bid.objects.get(listing=listing)
 
             except ObjectDoesNotExist:
+                # If it's the first, create a record of the bid in the database
                 # The first bid must at least, equal the starting bid
                 if int(offer) >= int(price):
 
-                    # If it is, create a record of the bid in the database
-                    first_bid = Bid(listing_id=listing_id,
-                                    seller_id=seller_id, starting_bid=price,
-                                    offer=offer, offer_count=1)
-                    first_bid.save()
+                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                                  starting_bid=price, offer=offer,
+                                  bidder=current_user, offer_count=1)
+                    new_bid.save()
                     message = "Bid successful!"
                 else:
+                    new_bid = current_bid
                     message = "Your bid is too low!"
 
-                # And display the page, with an error if the bid is too low
-                return render(request, "auctions/listing.html",
-                              {"user": current_user,
-                               "listing": listing,
-                               "watchlist": watchlist_items,
-                               "message": message})
             else:
-                # If this isn't the first bid record, instantiate the Bid model
-                current_bid = Bid.objects.get(listing_id=listing_id)
-
-                # Retrive the data to be used as parameters
-                new_offer = offer  # Offer user sent in the form
-                previous_offer = current_bid.offer  # Offer stored in database
-                count = current_bid.offer_count + 1  # Total No. of bids
+                # If (a) prior bid(s) exist(s):
+                # Retrive the data to be used as kwargs
+                previous_offer = current_bid.offer  # Latest bid in database
+                count = current_bid.offer_count + 1  # Total Number of bids
 
                 # Check if the new offer is valid
-                if new_offer > previous_offer:
+                if offer > previous_offer:
 
-                    new_bid = Bid(listing_id=listing_id, seller_id=seller_id,
-                                  starting_bid=price, offer=new_offer,
-                                  offer_count=count)
+                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                                  starting_bid=price, offer=offer,
+                                  bidder=current_user, offer_count=count)
 
-                    # Delete the previous offer's records
+                    # Delete the previous offer from record
                     current_bid.delete()
 
                     new_bid.save()
                     message = "Bid successful!"
                 else:
+                    new_bid = current_bid
                     message = "Your bid is too low!"
 
+            finally:
                 # And display the page, with an error if the bid is too low
                 return render(request, "auctions/listing.html",
                               {"user": current_user,
-                               "listing": listing,
+                               "listing": listing, "bid": new_bid,
                                "watchlist": watchlist_items,
-                               "message": message})
+                               "message": message, "form": form})
 
         # If the form fails validation, return an error:
         else:
             message = "Invalid input"
             return render(request, "auctions/listing.html",
                           {"user": current_user,
-                           "listing": listing,
+                           "listing": listing, "bid": current_bid,
                            "watchlist": watchlist_items,
-                           "message": message})
+                           "message": message, "form": form})
 
     # If it is a GET request:
     else:
+        try:
+            current_bid = Bid.objects.get(listing=listing)
+
+        except ObjectDoesNotExist:
+            pass
+
         form = BidForm
         # Displays the listing's page
         return render(request, "auctions/listing.html",
                       {"user": current_user,
                        "listing": listing,
+                       "bid": current_bid,
                        "watchlist": watchlist_items,
                        "form": form})
 
@@ -195,7 +195,7 @@ def watchlist(request):
             user_watchlist.listings.remove(current_item)
 
         # Refresh the current Listing's page
-        return listing(request, item_id)
+        return HttpResponseRedirect(reverse("listing", args=[current_item.pk]))
 
     # If it's a get request, display the Watchlist page
     watchlist_items = user_watchlist.listings.all()

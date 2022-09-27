@@ -11,16 +11,6 @@ class User(AbstractUser):
         return self.username
 
 
-# Bidding model:
-class Bid(models.Model):
-    listing_id = models.IntegerField()
-    seller_id = models.IntegerField()
-    starting_bid = models.IntegerField()
-
-    offer = models.IntegerField()
-    offer_count = models.IntegerField()
-
-
 # Auction listing model:
 class Listing(models.Model):
     seller = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -35,6 +25,23 @@ class Listing(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+# Bidding model:
+class Bid(models.Model):
+    listing = models.ForeignKey(Listing,
+                                on_delete=models.CASCADE,
+                                related_name="bid_listing")
+
+    seller_id = models.IntegerField()
+    starting_bid = models.IntegerField()
+    offer = models.IntegerField()
+
+    bidder = models.ForeignKey(settings.AUTH_USER_MODEL,
+                               on_delete=models.CASCADE,
+                               related_name="bidding_for")
+
+    offer_count = models.IntegerField()
 
 
 # and one for comments made on auction listings.
