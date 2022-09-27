@@ -5,10 +5,10 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-# from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 
-from .models import User, Listing, Watchlist
-from .forms import ListingForm
+from .models import User, Listing, Watchlist, Bid
+from .forms import ListingForm, BidForm
 
 
 # Default page (displays all the listings):
@@ -25,23 +25,104 @@ def index(request):
 # View for each Individual listing:
 def listing(request, item_id):
 
-    # This query set retrives a specific Listing (in database table 'Listing')
-    # that corresponds to the primary key of the object in the database
-    listing = Listing.objects.get(pk=item_id)
-
-    # Gets the current user
+    # Gets the current user id and Gets the current user
     user_id = request.user.id
     current_user = User.objects.get(pk=user_id)
-
     # Gets the items in the user's watchlist
     user_watchlist = Watchlist.objects.get(user=current_user)
     watchlist_items = user_watchlist.listings.all()
+    # Gets the item object
+    listing = Listing.objects.get(pk=item_id)
 
-    # Displays the listing's page
-    return render(request, "auctions/listing.html",
-                  {"user": current_user,
-                   "listing": listing,
-                   "watchlist": watchlist_items})
+    # If this is a POST request:
+    if request.method == "POST":
+
+        # Get the form data
+        form = BidForm(request.POST)
+
+        # Check if the form instance is valid
+        if form.is_valid():
+
+            # Get the first bid
+            offer = form.cleaned_data["offer"]
+
+            # And the other parameters for the bid instance
+            price = listing.starting_bid   # starting bid
+            listing_id = listing.id        # item's id
+            seller_id = listing.seller.id  # item's seller
+
+            # Check if this is the first bid request
+            try:
+                Bid.objects.get(listing_id=listing_id)
+
+            except ObjectDoesNotExist:
+                # The first bid must at least, equal the starting bid
+                if int(offer) >= int(price):
+
+                    # If it is, create a record of the bid in the database
+                    first_bid = Bid(listing_id=listing_id,
+                                    seller_id=seller_id, starting_bid=price,
+                                    offer=offer, offer_count=1)
+                    first_bid.save()
+                    message = "Bid successful!"
+                else:
+                    message = "Your bid is too low!"
+
+                # And display the page, with an error if the bid is too low
+                return render(request, "auctions/listing.html",
+                              {"user": current_user,
+                               "listing": listing,
+                               "watchlist": watchlist_items,
+                               "message": message})
+            else:
+                # If this isn't the first bid record, instantiate the Bid model
+                current_bid = Bid.objects.get(listing_id=listing_id)
+
+                # Retrive the data to be used as parameters
+                new_offer = offer  # Offer user sent in the form
+                previous_offer = current_bid.offer  # Offer stored in database
+                count = current_bid.offer_count + 1  # Total No. of bids
+
+                # Check if the new offer is valid
+                if new_offer > previous_offer:
+
+                    new_bid = Bid(listing_id=listing_id, seller_id=seller_id,
+                                  starting_bid=price, offer=new_offer,
+                                  offer_count=count)
+
+                    # Delete the previous offer's records
+                    current_bid.delete()
+
+                    new_bid.save()
+                    message = "Bid successful!"
+                else:
+                    message = "Your bid is too low!"
+
+                # And display the page, with an error if the bid is too low
+                return render(request, "auctions/listing.html",
+                              {"user": current_user,
+                               "listing": listing,
+                               "watchlist": watchlist_items,
+                               "message": message})
+
+        # If the form fails validation, return an error:
+        else:
+            message = "Invalid input"
+            return render(request, "auctions/listing.html",
+                          {"user": current_user,
+                           "listing": listing,
+                           "watchlist": watchlist_items,
+                           "message": message})
+
+    # If it is a GET request:
+    else:
+        form = BidForm
+        # Displays the listing's page
+        return render(request, "auctions/listing.html",
+                      {"user": current_user,
+                       "listing": listing,
+                       "watchlist": watchlist_items,
+                       "form": form})
 
 
 # View for creating a new listing

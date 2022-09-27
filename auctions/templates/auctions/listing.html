@@ -43,6 +43,15 @@
                 {% endif %}
             </form>
         </div>
+
+        <div>
+            <form action="{% url 'listing' listing.id %}" method="post">
+                {% csrf_token %}
+                {{ message }}
+                {{ form }}
+                <input type="submit" value="Make a bid">
+            </form>
+        </div>
     {% endif %}
 
     <!-- Bidding -->

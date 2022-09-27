@@ -13,12 +13,11 @@ class User(AbstractUser):
 
 # Bidding model:
 class Bid(models.Model):
-    listing = models.CharField()
-    seller = models.CharField()
+    listing_id = models.IntegerField()
+    seller_id = models.IntegerField()
     starting_bid = models.IntegerField()
 
-    first_offer = models.IntegerField(null=True, blank=True)
-    new_offer = models.IntegerField()
+    offer = models.IntegerField()
     offer_count = models.IntegerField()
 
 
