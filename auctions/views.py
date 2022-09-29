@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -25,104 +25,36 @@ def index(request):
 # View for each Individual listing:
 def listing(request, item_id):
 
-    # Gets the current user id and Gets the current user
-    user_id = request.user.id
-    current_user = User.objects.get(pk=user_id)
-    # Gets the items in the user's watchlist
-    user_watchlist = Watchlist.objects.get(user=current_user)
-    watchlist_items = user_watchlist.listings.all()
-    # Gets the item object
     listing = Listing.objects.get(pk=item_id)
 
-    # If this is a POST request:
-    if request.method == "POST":
-
-        # Get the form data
-        form = BidForm(request.POST)
-
-        # Check if the form instance is valid
-        if form.is_valid():
-
-            # Get the first bid
-            offer = form.cleaned_data["offer"]
-
-            # And the other parameters for the bid instance
-            price = listing.starting_bid   # starting bid
-            seller_id = listing.seller.id  # item's seller
-
-            # Check if this is the first bid request
-            try:
-                current_bid = Bid.objects.get(listing=listing)
-
-            except ObjectDoesNotExist:
-                # If it's the first, create a record of the bid in the database
-                # The first bid must at least, equal the starting bid
-                if int(offer) >= int(price):
-
-                    new_bid = Bid(listing=listing, seller_id=seller_id,
-                                  starting_bid=price, offer=offer,
-                                  bidder=current_user, offer_count=1)
-                    new_bid.save()
-                    message = "Bid successful!"
-                else:
-                    new_bid = current_bid
-                    message = "Your bid is too low!"
-
-            else:
-                # If (a) prior bid(s) exist(s):
-                # Retrive the data to be used as kwargs
-                previous_offer = current_bid.offer  # Latest bid in database
-                count = current_bid.offer_count + 1  # Total Number of bids
-
-                # Check if the new offer is valid
-                if offer > previous_offer:
-
-                    new_bid = Bid(listing=listing, seller_id=seller_id,
-                                  starting_bid=price, offer=offer,
-                                  bidder=current_user, offer_count=count)
-
-                    # Delete the previous offer from record
-                    current_bid.delete()
-
-                    new_bid.save()
-                    message = "Bid successful!"
-                else:
-                    new_bid = current_bid
-                    message = "Your bid is too low!"
-
-            finally:
-                # And display the page, with an error if the bid is too low
-                return render(request, "auctions/listing.html",
-                              {"user": current_user,
-                               "listing": listing, "bid": new_bid,
-                               "watchlist": watchlist_items,
-                               "message": message, "form": form})
-
-        # If the form fails validation, return an error:
-        else:
-            message = "Invalid input"
-            return render(request, "auctions/listing.html",
-                          {"user": current_user,
-                           "listing": listing, "bid": current_bid,
-                           "watchlist": watchlist_items,
-                           "message": message, "form": form})
-
     # If it is a GET request:
-    else:
-        try:
-            current_bid = Bid.objects.get(listing=listing)
+    try:
+        user_id = request.user.id
+        current_user = User.objects.get(pk=user_id)
+        user_watchlist = Watchlist.objects.get(user=current_user)
+        watchlist_items = user_watchlist.listings.all()
 
-        except ObjectDoesNotExist:
-            pass
-
-        form = BidForm
-        # Displays the listing's page
+    # Displays only basic info when user isn't logged in
+    except (ObjectDoesNotExist, UnboundLocalError):
         return render(request, "auctions/listing.html",
-                      {"user": current_user,
-                       "listing": listing,
-                       "bid": current_bid,
-                       "watchlist": watchlist_items,
-                       "form": form})
+                      {"listing": listing,
+                       "user": None})
+
+    form = BidForm()
+    try:
+        current_bid = Bid.objects.get(listing=listing)
+
+    # No bid info is rendered when there aren't any bids yet
+    except ObjectDoesNotExist:
+        return render(request, "auctions/listing.html",
+                      {"user": current_user, "listing": listing,
+                       "watchlist": watchlist_items, "form": form})
+
+    # If user is logged in and there are ongoing bids:
+    return render(request, "auctions/listing.html",
+                  {"user": current_user, "listing": listing,
+                   "bid": current_bid, "watchlist": watchlist_items,
+                   "form": form})
 
 
 # View for creating a new listing
@@ -167,6 +99,117 @@ def create_item(request):
     form = ListingForm
     return render(request,
                   "auctions/create_listing.html", {"form": form})
+
+
+# @login_required(login_url="login")
+def bidding(request):
+    if "new_bid" in request.POST:
+
+        # Get form data
+        form = BidForm(request.POST)
+        item_id = int(request.POST["listing"])
+
+        # Get listing data
+        listing = Listing.objects.get(pk=item_id)
+
+        # Get current user data
+        user_id = request.user.id
+        user = User.objects.get(pk=user_id)
+
+        # Form validation, and making sure a seller can't bid on own item
+        if form.is_valid() and user != listing.seller:
+
+            # Clean form data and get necessary listing data
+            offer = form.cleaned_data["offer"]
+            price = listing.starting_bid
+            seller_id = listing.seller.id
+
+            # Attempt to collect existing bid data
+            try:
+                current_bid = Bid.objects.get(listing=listing)
+
+            # Except block runs when there's no existing bid
+            except ObjectDoesNotExist:
+
+                # First offer should be at least equal to starting_bid
+                if int(offer) >= int(price):
+
+                    # Create a new bid and save it to the database
+                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                                  starting_bid=price, offer=offer,
+                                  bidder=user, offer_count=1)
+                    new_bid.save()
+                else:
+                    return HttpResponse("Bid is too low.")
+
+            # Else block runs when a bid already exists
+            else:
+                # Update existing bid with new offer and bidder data
+                count = current_bid.offer_count + 1
+
+                # New offers must be higher than previous ones
+                if offer > current_bid.offer:
+
+                    # Check whether auction is open/close
+                    status = current_bid.open_bid
+
+                    # If it's closed, return an error message
+                    if status is False:
+                        return HttpResponse("This auction is closed.")
+
+                    # If it's open, create a new bid instance
+                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                                  starting_bid=price, offer=offer,
+                                  bidder=user, offer_count=count)
+
+                    # Deleting the previous bid, save the latest
+                    current_bid.delete()
+                    new_bid.save()
+                else:
+                    return HttpResponse("Bid is too low.")
+
+            # Redirect back to the listing's link
+            return HttpResponseRedirect(reverse("listing", args=[item_id]))
+
+        # Prevents malicious users from tampering with form data
+        else:
+            return HttpResponse("Can't bid on own item.")
+
+
+def bid_status(request):
+    if "status" in request.POST:
+
+        # Get request data
+        item_id = int(request.POST["listing"])
+        action = request.POST["status"]
+
+        # Get listing data
+        listing = Listing.objects.get(pk=item_id)
+
+        # Get current user data
+        user_id = request.user.id
+        user = User.objects.get(pk=user_id)
+
+        # Checks if user has access to the listing
+        if user == listing.seller:
+
+            # Get the bid data for the listing
+            bid = Bid.objects.get(listing=listing)
+
+            # Change the open_bid field's value as required
+            if action == "Close Auction":
+                bid.open_bid = False
+
+            elif action == "Open Auction":
+                bid.open_bid = True
+
+            bid.save()
+
+        else:
+            return HttpResponse("Error.")
+
+        # Redirect back to the listing's page
+        return HttpResponseRedirect(reverse("listing", args=[item_id]))
 
 
 # View for watchlists

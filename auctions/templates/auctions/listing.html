@@ -5,65 +5,112 @@
 {% block title %}{{ listing.title }}{% endblock %}
 
 {% block body %}
-
+    <!-- Title and description -->
     <div>
         <h3>{{ listing.title }}</h3>
         {{ listing.description }}
     </div>
-
+    <!-- Image -->
     <div>
         <img style="width: 200px; height: 200px;" src="{{ listing.image }}" alt="Image">
     </div>
 
+    <!-- Listing Details -->
     <div>Seller: {{ listing.seller }}</div>
-
     <div>Category: {{ listing.category }}</div>
-
-    <div>Starting Bid: {{ bid.starting_bid }}$</div>
-
-    <div>Latest bid: {{ bid.offer }}$</div>
-
-    <div>
-        {{ bid.offer_count }} bid(s) so far.
-        {% if user == bid.bidder %}
-            <div>Your bid is the current bid.</div>
-        {% endif %}
-    </div>
-
-    <!-- Watchlist -->
+    <div>Starting Bid: {{ listing.starting_bid }}</div>
     <hr>
 
-    <!-- If the Listing's owner is the current user,
-        the watchlist form will not be rendered. -->
-    {% if listing.seller != user %}
-        <div>
-            <form action="{% url 'watchlist' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="item_id" id="item_id" value="{{ listing.id }}">
+    <!-- Biidding details -->
+    {% if user != None %}
 
-                <!-- Picks which inputs to render, based on whether the
-                    Listing can be found in the current user's Watchlist -->
-                {% if listing not in watchlist %}
-                    <input style="color: blue;" type="submit" value="Add to watchlist">
-                    <input type="hidden" name="state" id="state" value="Add">
-                {% else %}
-                    <input style="color: red;" type="submit" value="Remove from watchlist">
-                    <input type="hidden" name="state" id="state" value="Remove">
-                {% endif %}
-            </form>
-        </div>
+        <!-- Renders informaton based on current user's
+            relationship with the Listing's bid data -->
+        {% if bid.open_bid is True %}
 
-        <!-- Bidding -->
-        <hr>
+            <div>Latest bid: {{ bid.offer }}</div>
+            <div>{{ bid.offer_count }} bid(s) so far.</div>
 
-        <div>
-            {{ message }}
-            <form action="{% url 'listing' listing.id %}" method="post">
-                {% csrf_token %}
-                {{ form }}
-                <input type="submit" value="Make a bid">
-            </form>
-        </div>
+            {% if user == bid.bidder %}
+
+                <div>Your bid is the current bid.</div>
+
+            {% endif %}
+
+        {% elif bid.open_bid is False %}
+
+            <div>This auction is closed.</div>
+
+            <!-- Winning bid -->
+            {% if user == bid.bidder %}
+                <div>You have won this auction.
+                    Your winning bid: {{ bid.offer }}</div>
+            {% else %}
+                <div>Winning bid: {{ bid.offer }}</div>
+            {% endif %}
+            <!--  -->
+
+        {% else %}
+
+            <div>There are no bids yet.</div>
+
+        {% endif %}
+
+    <hr>
+    {% endif %}
+
+    <!-- Watchlist -->
+    <!-- This form is rendered only when the current user is not the owner -->
+    {% if user != None %}
+        {% if listing.seller != user %}
+            <div>
+                <form action="{% url 'watchlist' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" id="item_id" value="{{ listing.id }}">
+
+                    <!-- Checks presence of listing in current user's watchlist -->
+                    {% if listing not in watchlist %}
+                        <input style="color: blue;" type="submit" value="Add to watchlist">
+                        <input type="hidden" name="state" id="state" value="Add">
+                    {% else %}
+                        <input style="color: red;" type="submit" value="Remove from watchlist">
+                        <input type="hidden" name="state" id="state" value="Remove">
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Bidding -->
+            <hr>
+            {% if bid.open_bid is not False %}
+                <div>
+                    {{ message }}
+                    <form action="{% url 'bid' %}" method="post">
+                        {% csrf_token %}
+                        {{ form }}
+                        <input name="listing" type="hidden" value="{{ listing.id }}">
+                        <input name="new_bid" type="submit" value="Make a bid">
+                    </form>
+                </div>
+            {% endif %}
+
+        <!-- Closing/Opening auction -->
+        <!-- This block renders if the user is the listing's owner -->
+        {% else %}
+            {% if bid %}
+                <div>
+                    <form action="{% url 'status' %}" method="post">
+                        {% csrf_token %}
+                        <input name="listing" type="hidden" value="{{ listing.id }}">
+                        {% if bid.open_bid is True %}
+                            <input name="status" type="submit" value="Close Auction">
+                        {% else %}
+                            <input name="status" type="submit" value="Open Auction">
+                        {% endif %}
+                    </form>
+                </div>
+            <hr>
+            {% endif %}
+        {% endif %}
     {% endif %}
 
 {% endblock %}

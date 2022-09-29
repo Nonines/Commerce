@@ -29,6 +29,8 @@ class Listing(models.Model):
 
 # Bidding model:
 class Bid(models.Model):
+    open_bid = models.BooleanField(default=True)
+
     listing = models.ForeignKey(Listing,
                                 on_delete=models.CASCADE,
                                 related_name="bid_listing")
