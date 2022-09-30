@@ -113,4 +113,26 @@
         {% endif %}
     {% endif %}
 
+    <!-- Comments -->
+    {% if user != None %}
+        <div>
+            <form action="{% url 'comments' %}" method="post">
+                {% csrf_token %}
+                {{ comment }}
+                <input name="listing" type="hidden" value="{{ listing.id }}">
+                <input type="submit" value="Publish comment">
+            </form>
+        </div>
+    {% endif %}
+
+    <div>
+        <h3>Comments</h3>
+        <hr>
+        {% for object in comments %}
+            <p>{{object.last_modified}}</p>
+            <p>{{object.author}}: {{ object.comment }}</p>
+            <hr>
+        {% endfor %}
+    </div>
+
 {% endblock %}

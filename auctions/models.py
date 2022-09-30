@@ -19,7 +19,7 @@ class Listing(models.Model):
 
     title = models.CharField(max_length=32)
     description = models.TextField()
-    starting_bid = models.IntegerField()
+    starting_bid = models.PositiveIntegerField()
     image = models.URLField()
     category = models.CharField(max_length=24, null=True, blank=True)
 
@@ -35,7 +35,7 @@ class Bid(models.Model):
                                 on_delete=models.CASCADE,
                                 related_name="bid_listing")
 
-    seller = models.ForeignKey(Listing,
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL,
                                on_delete=models.CASCADE,
                                related_name="bid_seller")
 

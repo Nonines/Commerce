@@ -7,8 +7,8 @@ from django.urls import reverse
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import User, Listing, Watchlist, Bid
-from .forms import ListingForm, BidForm
+from .models import User, Listing, Watchlist, Bid, Comment
+from .forms import ListingForm, BidForm, CommentForm
 
 
 # Default page (displays all the listings):
@@ -31,8 +31,11 @@ def listing(request, item_id):
     try:
         user_id = request.user.id
         current_user = User.objects.get(pk=user_id)
+
         user_watchlist = Watchlist.objects.get(user=current_user)
         watchlist_items = user_watchlist.listings.all()
+
+        comments = Comment.objects.filter(item=listing)
 
     # Displays only basic info when user isn't logged in
     except (ObjectDoesNotExist, UnboundLocalError):
@@ -41,6 +44,7 @@ def listing(request, item_id):
                        "user": None})
 
     form = BidForm()
+    comment_form = CommentForm()
     try:
         current_bid = Bid.objects.get(listing=listing)
 
@@ -48,13 +52,15 @@ def listing(request, item_id):
     except ObjectDoesNotExist:
         return render(request, "auctions/listing.html",
                       {"user": current_user, "listing": listing,
-                       "watchlist": watchlist_items, "form": form})
+                       "watchlist": watchlist_items, "form": form,
+                       "comment": comment_form, "comments": comments})
 
     # If user is logged in and there are ongoing bids:
     return render(request, "auctions/listing.html",
                   {"user": current_user, "listing": listing,
                    "bid": current_bid, "watchlist": watchlist_items,
-                   "form": form})
+                   "form": form, "comment": comment_form,
+                   "comments": comments})
 
 
 # View for creating a new listing
@@ -244,6 +250,28 @@ def watchlist(request):
     watchlist_items = user_watchlist.listings.all()
     return render(request, "auctions/watchlist.html",
                   {"watchlist": watchlist_items})
+
+
+def comments(request):
+    if request.method == "POST":
+
+        item_id = int(request.POST["listing"])
+        listing = Listing.objects.get(pk=item_id)
+
+        user_id = request.user.id
+        current_user = User.objects.get(pk=user_id)
+
+        form = CommentForm(request.POST)
+
+        if form.is_valid():
+            comment = form.cleaned_data["comment"]
+
+            new_comment = Comment(item=listing, comment=comment,
+                                  author=current_user)
+
+            new_comment.save()
+
+        return HttpResponseRedirect(reverse("listing", args=[item_id]))
 
 
 # User Authentication:
