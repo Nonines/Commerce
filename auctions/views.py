@@ -122,7 +122,7 @@ def bidding(request):
             # Clean form data and get necessary listing data
             offer = form.cleaned_data["offer"]
             price = listing.starting_bid
-            seller_id = listing.seller.id
+            seller = listing.seller
 
             # Attempt to collect existing bid data
             try:
@@ -135,7 +135,7 @@ def bidding(request):
                 if int(offer) >= int(price):
 
                     # Create a new bid and save it to the database
-                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                    new_bid = Bid(listing=listing, seller=seller,
                                   starting_bid=price, offer=offer,
                                   bidder=user, offer_count=1)
                     new_bid.save()
@@ -151,14 +151,14 @@ def bidding(request):
                 if offer > current_bid.offer:
 
                     # Check whether auction is open/close
-                    status = current_bid.open_bid
+                    status = current_bid.is_open
 
                     # If it's closed, return an error message
                     if status is False:
                         return HttpResponse("This auction is closed.")
 
                     # If it's open, create a new bid instance
-                    new_bid = Bid(listing=listing, seller_id=seller_id,
+                    new_bid = Bid(listing=listing, seller=seller,
                                   starting_bid=price, offer=offer,
                                   bidder=user, offer_count=count)
 
@@ -196,12 +196,12 @@ def bid_status(request):
             # Get the bid data for the listing
             bid = Bid.objects.get(listing=listing)
 
-            # Change the open_bid field's value as required
+            # Change the is_open field's value as required
             if action == "Close Auction":
-                bid.open_bid = False
+                bid.is_open = False
 
             elif action == "Open Auction":
-                bid.open_bid = True
+                bid.is_open = True
 
             bid.save()
 

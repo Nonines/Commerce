@@ -26,7 +26,7 @@
 
         <!-- Renders informaton based on current user's
             relationship with the Listing's bid data -->
-        {% if bid.open_bid is True %}
+        {% if bid.is_open is True %}
 
             <div>Latest bid: {{ bid.offer }}</div>
             <div>{{ bid.offer_count }} bid(s) so far.</div>
@@ -37,7 +37,7 @@
 
             {% endif %}
 
-        {% elif bid.open_bid is False %}
+        {% elif bid.is_open is False %}
 
             <div>This auction is closed.</div>
 
@@ -81,7 +81,7 @@
 
             <!-- Bidding -->
             <hr>
-            {% if bid.open_bid is not False %}
+            {% if bid.is_open is not False %}
                 <div>
                     {{ message }}
                     <form action="{% url 'bid' %}" method="post">
@@ -101,7 +101,7 @@
                     <form action="{% url 'status' %}" method="post">
                         {% csrf_token %}
                         <input name="listing" type="hidden" value="{{ listing.id }}">
-                        {% if bid.open_bid is True %}
+                        {% if bid.is_open is True %}
                             <input name="status" type="submit" value="Close Auction">
                         {% else %}
                             <input name="status" type="submit" value="Open Auction">

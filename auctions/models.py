@@ -29,13 +29,16 @@ class Listing(models.Model):
 
 # Bidding model:
 class Bid(models.Model):
-    open_bid = models.BooleanField(default=True)
+    is_open = models.BooleanField(default=True)
 
     listing = models.ForeignKey(Listing,
                                 on_delete=models.CASCADE,
                                 related_name="bid_listing")
 
-    seller_id = models.IntegerField()
+    seller = models.ForeignKey(Listing,
+                               on_delete=models.CASCADE,
+                               related_name="bid_seller")
+
     starting_bid = models.IntegerField()
     offer = models.IntegerField()
 
@@ -46,12 +49,26 @@ class Bid(models.Model):
     offer_count = models.IntegerField()
 
 
-# and one for comments made on auction listings.
+# Comments model:
+class Comment(models.Model):
+    item = models.ForeignKey(Listing,
+                             on_delete=models.CASCADE,
+                             related_name="comments")
+
+    comment = models.TextField(max_length=128, null=False, blank=False)
+
+    author = models.ForeignKey(settings.AUTH_USER_MODEL,
+                               on_delete=models.CASCADE,
+                               related_name="commenter")
+
+    last_modified = models.DateTimeField(auto_now=True)
+
 
 # Watchlist model:
 class Watchlist(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              on_delete=models.CASCADE,
                              related_name="watchlist_owned")
+
     listings = models.ManyToManyField(Listing,
                                       related_name="watchlist_in")
