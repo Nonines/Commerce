@@ -23,6 +23,8 @@ class Listing(models.Model):
     image = models.URLField()
     category = models.CharField(max_length=24, null=True, blank=True)
 
+    date_created = models.DateField(auto_now_add=True)
+
     def __str__(self) -> str:
         return self.title
 
@@ -55,13 +57,13 @@ class Comment(models.Model):
                              on_delete=models.CASCADE,
                              related_name="comments")
 
-    comment = models.TextField(max_length=128, null=False, blank=False)
+    content = models.TextField(max_length=128, null=False, blank=False)
 
     author = models.ForeignKey(settings.AUTH_USER_MODEL,
                                on_delete=models.CASCADE,
                                related_name="commenter")
 
-    last_modified = models.DateTimeField(auto_now=True)
+    date_published = models.DateField(auto_now_add=True)
 
 
 # Watchlist model:

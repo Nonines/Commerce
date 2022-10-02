@@ -1,0 +1,13 @@
+{% extends "auctions/layout.html" %}
+
+{% block title %}Error{% endblock %}
+
+{% block body %}
+
+{{ error }}
+
+{% if listing_pk %}
+    <div><a href="{% url 'listing' item_id=listing_pk %}">Back</a></div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,17 @@
+<!-- Template for Categories: -->
+
+{% extends "auctions/layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+
+<h3>Listings</h3>
+
+{% for listing in group %}
+    <ul>
+        <li><a href="{% url 'listing' item_id=listing.pk %}">{{ listing.title }}</a></li>
+    </ul>
+{% endfor %}
+
+{% endblock %}

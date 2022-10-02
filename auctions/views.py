@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -24,43 +24,66 @@ def index(request):
 
 # View for each Individual listing:
 def listing(request, item_id):
+    if request.method == "GET":
 
-    listing = Listing.objects.get(pk=item_id)
+        # Get listing and comments data
+        try:
+            listing = Listing.objects.get(pk=item_id)
+            comments = Comment.objects.filter(item=listing)
 
-    # If it is a GET request:
-    try:
-        user_id = request.user.id
-        current_user = User.objects.get(pk=user_id)
+        #
+        except ObjectDoesNotExist:
+            return render(request, "auctions/error_page.html",
+                          {"error": "Listing not found."})
 
+        # Check if user is authenticated
+        try:
+            user_id = request.user.id
+            current_user = User.objects.get(pk=user_id)
+
+        # If user is anonymous
+        except ObjectDoesNotExist:
+            return render(request, "auctions/listing.html",
+                          {"listing": listing, "comments": comments,
+                           "user": None})
+
+        # Watchlist data for current user
         user_watchlist = Watchlist.objects.get(user=current_user)
         watchlist_items = user_watchlist.listings.all()
 
-        comments = Comment.objects.filter(item=listing)
+        # Bid data
+        try:
+            current_bid = Bid.objects.get(listing=listing)
 
-    # Displays only basic info when user isn't logged in
-    except (ObjectDoesNotExist, UnboundLocalError):
-        return render(request, "auctions/listing.html",
-                      {"listing": listing,
-                       "user": None})
+        except ObjectDoesNotExist:
+            current_bid = None
 
-    form = BidForm()
-    comment_form = CommentForm()
-    try:
-        current_bid = Bid.objects.get(listing=listing)
+        # Form fields
+        form = BidForm()
+        comment_form = CommentForm()
 
-    # No bid info is rendered when there aren't any bids yet
-    except ObjectDoesNotExist:
         return render(request, "auctions/listing.html",
                       {"user": current_user, "listing": listing,
-                       "watchlist": watchlist_items, "form": form,
-                       "comment": comment_form, "comments": comments})
+                       "bid": current_bid, "watchlist": watchlist_items,
+                       "form": form, "comment": comment_form,
+                       "comments": comments})
 
-    # If user is logged in and there are ongoing bids:
-    return render(request, "auctions/listing.html",
-                  {"user": current_user, "listing": listing,
-                   "bid": current_bid, "watchlist": watchlist_items,
-                   "form": form, "comment": comment_form,
-                   "comments": comments})
+    # POST
+    if request.method == "POST":
+
+        user_id = request.user.id
+        current_user = User.objects.get(pk=user_id)
+
+        if "delete-comment" in request.POST:
+            comment_pk = request.POST["comment-pk"]
+            comment = Comment.objects.get(pk=comment_pk)
+            if comment.author == current_user:
+                comment.delete()
+                item = comment.item
+                return HttpResponseRedirect(reverse("listing", args=[item.pk]))
+
+        return render(request, "auctions/error_page.html",
+                      {"error": "Error."})
 
 
 # View for creating a new listing
@@ -107,115 +130,156 @@ def create_item(request):
                   "auctions/create_listing.html", {"form": form})
 
 
-# @login_required(login_url="login")
+# View for bids' logic
+@login_required(login_url="login")
 def bidding(request):
-    if "new_bid" in request.POST:
+    if request.method == "POST":
+        if "new_bid" in request.POST:
 
-        # Get form data
-        form = BidForm(request.POST)
-        item_id = int(request.POST["listing"])
+            # Get form data
+            form = BidForm(request.POST)
+            item_id = int(request.POST["listing"])
 
-        # Get listing data
-        listing = Listing.objects.get(pk=item_id)
+            # Get listing data
+            listing = Listing.objects.get(pk=item_id)
 
-        # Get current user data
-        user_id = request.user.id
-        user = User.objects.get(pk=user_id)
+            # Get current user data
+            user_id = request.user.id
+            user = User.objects.get(pk=user_id)
 
-        # Form validation, and making sure a seller can't bid on own item
-        if form.is_valid() and user != listing.seller:
+            # Form validation, and making sure a seller can't bid on own item
+            if form.is_valid() and user != listing.seller:
 
-            # Clean form data and get necessary listing data
-            offer = form.cleaned_data["offer"]
-            price = listing.starting_bid
-            seller = listing.seller
+                # Clean form data and get necessary listing data
+                offer = form.cleaned_data["offer"]
+                price = listing.starting_bid
+                seller = listing.seller
 
-            # Attempt to collect existing bid data
-            try:
-                current_bid = Bid.objects.get(listing=listing)
+                # Attempt to collect existing bid data
+                try:
+                    current_bid = Bid.objects.get(listing=listing)
 
-            # Except block runs when there's no existing bid
-            except ObjectDoesNotExist:
+                # Except block runs when there's no existing bid
+                except ObjectDoesNotExist:
 
-                # First offer should be at least equal to starting_bid
-                if int(offer) >= int(price):
+                    # First offer should be at least equal to starting_bid
+                    if int(offer) >= int(price):
 
-                    # Create a new bid and save it to the database
-                    new_bid = Bid(listing=listing, seller=seller,
-                                  starting_bid=price, offer=offer,
-                                  bidder=user, offer_count=1)
-                    new_bid.save()
+                        # Create a new bid and save it to the database
+                        new_bid = Bid(listing=listing, seller=seller,
+                                      starting_bid=price, offer=offer,
+                                      bidder=user, offer_count=1)
+                        new_bid.save()
+                    else:
+                        return render(request, "auctions/error_page.html",
+                                      {"error": "Bid is too low.",
+                                       "listing_pk": item_id})
+
+                # Else block runs when a bid already exists
                 else:
-                    return HttpResponse("Bid is too low.")
+                    # Update existing bid with new offer and bidder data
+                    count = current_bid.offer_count + 1
 
-            # Else block runs when a bid already exists
+                    # New offers must be higher than previous ones
+                    if offer > current_bid.offer:
+
+                        # Check whether auction is open/close
+                        status = current_bid.is_open
+
+                        # If it's closed, return an error message
+                        if status is False:
+                            return render(request, "auctions/error_page.html",
+                                          {"error": "This auction is closed"})
+
+                        # If it's open, create a new bid instance
+                        new_bid = Bid(listing=listing, seller=seller,
+                                      starting_bid=price, offer=offer,
+                                      bidder=user, offer_count=count)
+
+                        # Deleting the previous bid, save the latest
+                        current_bid.delete()
+                        new_bid.save()
+                    else:
+                        return render(request, "auctions/error_page.html",
+                                      {"error": "Bid is too low."})
+
+                # Redirect back to the listing's link
+                return HttpResponseRedirect(reverse("listing", args=[item_id]))
+
+            # Prevents adversarial users from changing form inputs
             else:
-                # Update existing bid with new offer and bidder data
-                count = current_bid.offer_count + 1
+                return render(request, "auctions/error_page.html",
+                              {"error_page": "Invalid form."})
 
-                # New offers must be higher than previous ones
-                if offer > current_bid.offer:
+    return render(request, "auctions/error_page.html",
+                  {"error_page": "Page not found"})
 
-                    # Check whether auction is open/close
-                    status = current_bid.is_open
 
-                    # If it's closed, return an error message
-                    if status is False:
-                        return HttpResponse("This auction is closed.")
+# View for closing/opening bids
+@login_required(login_url="login")
+def bid_status(request):
+    if request.method == "POST":
+        if "status" in request.POST:
 
-                    # If it's open, create a new bid instance
-                    new_bid = Bid(listing=listing, seller=seller,
-                                  starting_bid=price, offer=offer,
-                                  bidder=user, offer_count=count)
+            # Get request data
+            item_id = int(request.POST["listing"])
+            action = request.POST["status"]
 
-                    # Deleting the previous bid, save the latest
-                    current_bid.delete()
-                    new_bid.save()
-                else:
-                    return HttpResponse("Bid is too low.")
+            # Get listing data
+            listing = Listing.objects.get(pk=item_id)
 
-            # Redirect back to the listing's link
+            # Get current user data
+            user_id = request.user.id
+            user = User.objects.get(pk=user_id)
+
+            # Checks if user has access to the listing
+            if user == listing.seller:
+
+                # Get the bid data for the listing
+                bid = Bid.objects.get(listing=listing)
+
+                # Change the is_open field's value as required
+                if action == "Close Auction":
+                    bid.is_open = False
+
+                elif action == "Open Auction":
+                    bid.is_open = True
+
+                bid.save()
+
+            else:
+                return render(request, "auctions/error_page.html",
+                              {"error": "Error. Try again"})
+
+            # Redirect back to the listing's page
             return HttpResponseRedirect(reverse("listing", args=[item_id]))
 
-        # Prevents malicious users from tampering with form data
-        else:
-            return HttpResponse("Can't bid on own item.")
+    return render(request, "auctions/error_page.html",
+                  {"error_page": "Page not found"})
 
 
-def bid_status(request):
-    if "status" in request.POST:
+# View for listing all categories
+def categories(request):
 
-        # Get request data
-        item_id = int(request.POST["listing"])
-        action = request.POST["status"]
+    listings = Listing.objects.all()
+    categories_list = []
 
-        # Get listing data
-        listing = Listing.objects.get(pk=item_id)
+    for listing in listings:
+        categories_list.append(listing.category)
 
-        # Get current user data
-        user_id = request.user.id
-        user = User.objects.get(pk=user_id)
+    all_categories = set(categories_list)
 
-        # Checks if user has access to the listing
-        if user == listing.seller:
+    return render(request, "auctions/category_list.html",
+                  {"categories": all_categories})
 
-            # Get the bid data for the listing
-            bid = Bid.objects.get(listing=listing)
 
-            # Change the is_open field's value as required
-            if action == "Close Auction":
-                bid.is_open = False
+# View for each category
+def category(request, category_name):
+    group = Listing.objects.filter(category=category_name)
 
-            elif action == "Open Auction":
-                bid.is_open = True
-
-            bid.save()
-
-        else:
-            return HttpResponse("Error.")
-
-        # Redirect back to the listing's page
-        return HttpResponseRedirect(reverse("listing", args=[item_id]))
+    return render(request, "auctions/category.html",
+                  {"group": group,
+                   "title": category_name})
 
 
 # View for watchlists
@@ -252,24 +316,26 @@ def watchlist(request):
                   {"watchlist": watchlist_items})
 
 
-def comments(request):
+# View for creating comments
+def create_comments(request):
     if request.method == "POST":
+        if "submit-comment" in request.POST:
 
-        item_id = int(request.POST["listing"])
-        listing = Listing.objects.get(pk=item_id)
+            item_id = int(request.POST["listing"])
+            listing = Listing.objects.get(pk=item_id)
 
-        user_id = request.user.id
-        current_user = User.objects.get(pk=user_id)
+            user_id = request.user.id
+            current_user = User.objects.get(pk=user_id)
 
-        form = CommentForm(request.POST)
+            form = CommentForm(request.POST)
 
-        if form.is_valid():
-            comment = form.cleaned_data["comment"]
+            if form.is_valid():
+                comment = form.cleaned_data["content"]
 
-            new_comment = Comment(item=listing, comment=comment,
-                                  author=current_user)
+                new_comment = Comment(item=listing, content=comment,
+                                      author=current_user)
 
-            new_comment.save()
+                new_comment.save()
 
         return HttpResponseRedirect(reverse("listing", args=[item_id]))
 

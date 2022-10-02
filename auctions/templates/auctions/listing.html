@@ -17,7 +17,7 @@
 
     <!-- Listing Details -->
     <div>Seller: {{ listing.seller }}</div>
-    <div>Category: {{ listing.category }}</div>
+    <div>Category: <a href="{% url 'a_category' listing.category %}">{{ listing.category }}</a></div>
     <div>Starting Bid: {{ listing.starting_bid }}</div>
     <hr>
 
@@ -116,21 +116,30 @@
     <!-- Comments -->
     {% if user != None %}
         <div>
+            <!-- Creating a comment -->
             <form action="{% url 'comments' %}" method="post">
                 {% csrf_token %}
                 {{ comment }}
                 <input name="listing" type="hidden" value="{{ listing.id }}">
-                <input type="submit" value="Publish comment">
+                <input name="submit-comment" type="submit" value="Publish comment">
             </form>
         </div>
     {% endif %}
 
     <div>
+        <hr>
         <h3>Comments</h3>
         <hr>
-        {% for object in comments %}
-            <p>{{object.last_modified}}</p>
-            <p>{{object.author}}: {{ object.comment }}</p>
+        {% for comment in comments %}
+            <p>Date published: {{ comment.date_published }}</p>
+            <p>{{comment.author}}: {{ comment.content }}</p>
+            {% if comment.author == user %}
+                <form action="{% url 'listing' item_id=listing.id %}" method="post">
+                    {% csrf_token %}
+                    <input name="comment-pk" type="hidden" value="{{ comment.pk }}">
+                    <input name="delete-comment" type="submit" value="Delete">
+                </form>
+            {% endif %}
             <hr>
         {% endfor %}
     </div>
