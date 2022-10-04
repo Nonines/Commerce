@@ -31,7 +31,7 @@ def listing(request, item_id):
             listing = Listing.objects.get(pk=item_id)
             comments = Comment.objects.filter(item=listing)
 
-        #
+        # 404
         except ObjectDoesNotExist:
             return render(request, "auctions/error_page.html",
                           {"error": "Listing not found."})
@@ -133,86 +133,63 @@ def create_item(request):
 # View for bids' logic
 @login_required(login_url="login")
 def bidding(request):
-    if request.method == "POST":
-        if "new_bid" in request.POST:
+    if request.method == "POST" and "new_bid" in request.POST:
 
-            # Get form data
-            form = BidForm(request.POST)
-            item_id = int(request.POST["listing"])
+        # Get form data
+        form = BidForm(request.POST)
+        item_id = int(request.POST["listing"])
 
-            # Get listing data
-            listing = Listing.objects.get(pk=item_id)
+        # Get listing data
+        listing = Listing.objects.get(pk=item_id)
+        price = listing.starting_bid
+        seller = listing.seller
 
-            # Get current user data
-            user_id = request.user.id
-            user = User.objects.get(pk=user_id)
+        # Get current user data
+        user_id = request.user.id
+        user = User.objects.get(pk=user_id)
 
-            # Form validation, and making sure a seller can't bid on own item
-            if form.is_valid() and user != listing.seller:
+        # Form validation, and making sure a seller can't bid on own item
+        if form.is_valid() and user != listing.seller:
 
-                # Clean form data and get necessary listing data
-                offer = form.cleaned_data["offer"]
-                price = listing.starting_bid
-                seller = listing.seller
+            # Clean form data
+            offer = form.cleaned_data["offer"]
 
-                # Attempt to collect existing bid data
-                try:
-                    current_bid = Bid.objects.get(listing=listing)
+            # Attempt to collect existing bid data
+            try:
+                latest_bid = Bid.objects.get(listing=listing)
+                if latest_bid.is_open is False:
+                    return render(request, "auctions/error_page.html",
+                                  {"error": "Auction is closed."})
 
-                # Except block runs when there's no existing bid
-                except ObjectDoesNotExist:
+                latest_offer = latest_bid.offer
+                offers_count = latest_bid.offer_count
 
-                    # First offer should be at least equal to starting_bid
-                    if int(offer) >= int(price):
+                # Delete previous bid data if new offer is legit
+                if int(offer) > latest_offer:
+                    latest_bid.delete()
 
-                        # Create a new bid and save it to the database
-                        new_bid = Bid(listing=listing, seller=seller,
-                                      starting_bid=price, offer=offer,
-                                      bidder=user, offer_count=1)
-                        new_bid.save()
-                    else:
-                        return render(request, "auctions/error_page.html",
-                                      {"error": "Bid is too low.",
-                                       "listing_pk": item_id})
+            # If no existing bid data exists:
+            except ObjectDoesNotExist:
+                latest_offer = 0
+                offers_count = 0
 
-                # Else block runs when a bid already exists
-                else:
-                    # Update existing bid with new offer and bidder data
-                    count = current_bid.offer_count + 1
+            # Check if offer is legit on both counts
+            if int(offer) >= price and int(offer) > latest_offer:
 
-                    # New offers must be higher than previous ones
-                    if offer > current_bid.offer:
-
-                        # Check whether auction is open/close
-                        status = current_bid.is_open
-
-                        # If it's closed, return an error message
-                        if status is False:
-                            return render(request, "auctions/error_page.html",
-                                          {"error": "This auction is closed"})
-
-                        # If it's open, create a new bid instance
-                        new_bid = Bid(listing=listing, seller=seller,
-                                      starting_bid=price, offer=offer,
-                                      bidder=user, offer_count=count)
-
-                        # Deleting the previous bid, save the latest
-                        current_bid.delete()
-                        new_bid.save()
-                    else:
-                        return render(request, "auctions/error_page.html",
-                                      {"error": "Bid is too low."})
+                count = offers_count + 1
+                new_bid = Bid(listing=listing, seller=seller,
+                              starting_bid=price, offer=offer,
+                              bidder=user, offer_count=count)
+                new_bid.save()
 
                 # Redirect back to the listing's link
                 return HttpResponseRedirect(reverse("listing", args=[item_id]))
 
-            # Prevents adversarial users from changing form inputs
-            else:
-                return render(request, "auctions/error_page.html",
-                              {"error_page": "Invalid form."})
+            return render(request, "auctions/error_page.html",
+                          {"error": "Bid is too low."})
 
     return render(request, "auctions/error_page.html",
-                  {"error_page": "Page not found"})
+                  {"error": "Invalid request."})
 
 
 # View for closing/opening bids
