@@ -8,7 +8,7 @@
     <div class="index-page-container">
         {% for listing in listings %}
         <div class="each-listing">
-            <p><a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></p>
+            <div class="each-listing-title"><a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></div>
             <img src="{{ listing.image }}" alt="Image">
             <ul>
                 <li>Description: {{ listing.description }}</li>

@@ -16,10 +16,10 @@ def index(request):
     # When this view is called, retrieve all objects(data in database fields)
     # from the Listing table by constructing a QuerySet, and passing it as
     # context to the rendered template
-    listings = Listing.objects.all()
+    active_listings = Listing.objects.filter(active=True)
 
     return render(request,
-                  "auctions/index.html", {"listings": listings})
+                  "auctions/index.html", {"listings": active_listings})
 
 
 # View for each Individual listing:
@@ -217,13 +217,17 @@ def bid_status(request):
                 bid = Bid.objects.get(listing=listing)
 
                 # Change the is_open field's value as required
+                # As well as the corresponding active value in Listing
                 if action == "Close Auction":
                     bid.is_open = False
+                    listing.active = False
 
                 elif action == "Open Auction":
                     bid.is_open = True
+                    listing.active = True
 
                 bid.save()
+                listing.save()
 
             else:
                 return render(request, "auctions/error_page.html",
@@ -253,7 +257,7 @@ def categories(request):
 
 # View for each category
 def category(request, category_name):
-    group = Listing.objects.filter(category=category_name)
+    group = Listing.objects.filter(category=category_name, active=True)
 
     return render(request, "auctions/category.html",
                   {"group": group,

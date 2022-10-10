@@ -18,12 +18,13 @@ class Listing(models.Model):
                                related_name="own_goods")
 
     title = models.CharField(max_length=32)
-    description = models.TextField()
+    description = models.TextField(max_length=64)
     starting_bid = models.PositiveIntegerField()
     image = models.URLField()
     category = models.CharField(max_length=24, null=True, blank=True)
 
     date_created = models.DateField(auto_now_add=True)
+    active = models.BooleanField(default=True)
 
     def __str__(self) -> str:
         return self.title
@@ -63,7 +64,7 @@ class Comment(models.Model):
                                on_delete=models.CASCADE,
                                related_name="commenter")
 
-    date_published = models.DateField(auto_now_add=True)
+    date_published = models.DateTimeField(auto_now_add=True)
 
 
 # Watchlist model:
