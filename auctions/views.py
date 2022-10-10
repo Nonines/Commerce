@@ -25,6 +25,7 @@ def index(request):
 # View for each Individual listing:
 def listing(request, item_id):
     if request.method == "GET":
+        all_listings = Listing.objects.all()
 
         # Get listing and comments data
         try:
@@ -45,7 +46,7 @@ def listing(request, item_id):
         except ObjectDoesNotExist:
             return render(request, "auctions/listing.html",
                           {"listing": listing, "comments": comments,
-                           "user": None})
+                           "user": None, "all_listings": all_listings})
 
         # Watchlist data for current user
         user_watchlist = Watchlist.objects.get(user=current_user)
@@ -66,7 +67,7 @@ def listing(request, item_id):
                       {"user": current_user, "listing": listing,
                        "bid": current_bid, "watchlist": watchlist_items,
                        "form": form, "comment": comment_form,
-                       "comments": comments})
+                       "comments": comments, "all_listings": all_listings})
 
     # POST
     if request.method == "POST":
@@ -133,7 +134,7 @@ def create_item(request):
 # View for bids' logic
 @login_required(login_url="login")
 def bidding(request):
-    if request.method == "POST" and "new_bid" in request.POST:
+    if request.method == "POST":
 
         # Get form data
         form = BidForm(request.POST)
@@ -296,23 +297,22 @@ def watchlist(request):
 # View for creating comments
 def create_comments(request):
     if request.method == "POST":
-        if "submit-comment" in request.POST:
 
-            item_id = int(request.POST["listing"])
-            listing = Listing.objects.get(pk=item_id)
+        item_id = int(request.POST["listing"])
+        listing = Listing.objects.get(pk=item_id)
 
-            user_id = request.user.id
-            current_user = User.objects.get(pk=user_id)
+        user_id = request.user.id
+        current_user = User.objects.get(pk=user_id)
 
-            form = CommentForm(request.POST)
+        form = CommentForm(request.POST)
 
-            if form.is_valid():
-                comment = form.cleaned_data["content"]
+        if form.is_valid():
+            comment = form.cleaned_data["content"]
 
-                new_comment = Comment(item=listing, content=comment,
-                                      author=current_user)
+            new_comment = Comment(item=listing, content=comment,
+                                  author=current_user)
 
-                new_comment.save()
+            new_comment.save()
 
         return HttpResponseRedirect(reverse("listing", args=[item_id]))
 

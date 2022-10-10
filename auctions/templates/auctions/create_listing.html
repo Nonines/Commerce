@@ -5,11 +5,17 @@
 {% block title %}Create New Listing{% endblock %}
 
 {% block body %}
+<div>
+    <h5 class="page-title">Create New Listing</h5>
 
-<form action="{% url 'create' %}" method="post">
-    {% csrf_token %}
-    {{ form }}
-    <input type="submit" value="Create">
-</form>
+    <div class="create-listing-form">
+
+        <form action="{% url 'create' %}" method="post" id="create">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" form="create">Create</button>
+        </form>
+    </div>
+</div>
 
 {% endblock %}

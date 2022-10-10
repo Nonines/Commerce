@@ -2,20 +2,21 @@
 
 {% block body %}
 
-    <h2>Active Listings</h2>
+    <h2 class="page-title">Active Listings</h2>
     <hr>
 
-    {% for listing in listings %}
-    <div>
-        <img style="width: 100px; height: 100px;" src="{{ listing.image }}" alt="Image">
-        <ul>
-            <li>Name: <a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></li>
-            <li>Description: {{ listing.description }}</li>
-            <li>Seller: {{listing.seller}}</li>
-            <li>Starting bid: {{ listing.starting_bid }}$</li>
-        </ul>
-        <hr>
+    <div class="index-page-container">
+        {% for listing in listings %}
+        <div class="each-listing">
+            <p><a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></p>
+            <img src="{{ listing.image }}" alt="Image">
+            <ul>
+                <li>Description: {{ listing.description }}</li>
+                <li>Seller: {{listing.seller}}</li>
+                <li>Starting bid: {{ listing.starting_bid }}$</li>
+            </ul>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 
 {% endblock %}

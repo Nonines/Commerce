@@ -2,72 +2,63 @@
 
 {% extends "auctions/layout.html" %}
 
-{% block title %}{{ listing.title }}{% endblock %}
+{% block title %}Listing: {{ listing.title }}{% endblock %}
 
 {% block body %}
-    <!-- Title and description -->
-    <div>
-        <h3>{{ listing.title }}</h3>
-        {{ listing.description }}
-    </div>
-    <!-- Image -->
-    <div>
-        <img style="width: 200px; height: 200px;" src="{{ listing.image }}" alt="Image">
-    </div>
 
-    <!-- Listing Details -->
-    <div>Seller: {{ listing.seller }}</div>
-    <div>Category: <a href="{% url 'a_category' listing.category %}">{{ listing.category }}</a></div>
-    <div>Starting Bid: {{ listing.starting_bid }}</div>
-    <hr>
+<div class="container">
 
-    <!-- Biidding details -->
-    {% if user != None %}
-
-        <!-- Renders informaton based on current user's
-            relationship with the Listing's bid data -->
-        {% if bid.is_open is True %}
-
-            <div>Latest bid: {{ bid.offer }}</div>
-            <div>{{ bid.offer_count }} bid(s) so far.</div>
-
-            {% if user == bid.bidder %}
-
-                <div>Your bid is the current bid.</div>
-
-            {% endif %}
-
-        {% elif bid.is_open is False %}
-
-            <div>This auction is closed.</div>
-
-            <!-- Winning bid -->
-            {% if user == bid.bidder %}
-                <div>You have won this auction.
-                    Your winning bid: {{ bid.offer }}</div>
-            {% else %}
-                <div>Winning bid: {{ bid.offer }}</div>
-            {% endif %}
-            <!--  -->
-
-        {% else %}
-
-            <div>There are no bids yet.</div>
-
+    <div class="main">
+        <!-- LISTING INFO -->
+        <div class="listing-image">
+            <img src="{{ listing.image }}" alt="item image">
+        </div>
+        <div class="listing-info">
+            <h1>{{ listing.title}}</h1>
+            <p>{{ listing.description }}</p>
+            <p>Seller: {{ listing.seller }}</p>
+            <p>Starting Bid: {{ listing.starting_bid }}</p>
+            <p>Category: <a href="{% url 'a_category' listing.category %}">{{ listing.category }}</a></p>
+            <p>Date created: {{ listing.date_created }}</p>
+        </div>
+        <!-- -------------------------------------------------- -->
+        <!-- BID INFO -->
+        {% if user != None %}
+            <div class="bid-info">
+                {% if bid.is_open is True %}
+                    <div class="bid-open-status">
+                        <p>Latest Bid: {{ bid.offer }}</p>
+                        <p>{{ bid.offer_count}} bid(s) so far. </p>
+                    </div>
+                    <div class="bid-open-bidder">
+                        {% if user == bid.bidder %}
+                            <p>Your bid is the current bid.</p>
+                        {% elif user != bid.bidder and user != bid.seller %}
+                            <p>Your bid is NOT the current bid.</p>
+                        {% endif %}
+                    </div>
+                {% elif bid.is_open is False %}
+                    <div class="bid-closed-status">
+                        <p>This auction is closed.</p>
+                    </div>
+                    <div class="bid-closed-winner">
+                        {% if user == bid.bidder %}
+                            <p>You have won this auction.</p>
+                        {% endif %}
+                            <p>Winning bid: {{ bid.offer }}</p>
+                    </div>
+                {% else %}
+                    <p>There are no bids yet.</p>
+                {% endif %}
+            </div>
         {% endif %}
-
-    <hr>
-    {% endif %}
-
-    <!-- Watchlist -->
-    <!-- This form is rendered only when the current user is not the owner -->
-    {% if user != None %}
-        {% if listing.seller != user %}
-            <div>
+        <!-- -------------------------------------------------- -->
+        <!-- WATCHLIST FORM -->
+        {% if user != None and user != listing.seller %}
+            <div class="watchlist-form">
                 <form action="{% url 'watchlist' %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="item_id" id="item_id" value="{{ listing.id }}">
-
                     <!-- Checks presence of listing in current user's watchlist -->
                     {% if listing not in watchlist %}
                         <input style="color: blue;" type="submit" value="Add to watchlist">
@@ -78,26 +69,26 @@
                     {% endif %}
                 </form>
             </div>
-
-            <!-- Bidding -->
-            <hr>
+        {% endif %}
+        <!-- -------------------------------------------------- -->
+        <!-- BIDDING FORM -->
+        {% if user != None and user != listing.seller %}
             {% if bid.is_open is not False %}
-                <div>
-                    {{ message }}
-                    <form action="{% url 'bid' %}" method="post">
+                <div class="bidding-form">
+                    <form action="{% url 'bid' %}" method="post" id="bidding">
                         {% csrf_token %}
                         {{ form }}
                         <input name="listing" type="hidden" value="{{ listing.id }}">
-                        <input name="new_bid" type="submit" value="Make a bid">
+                        <button type="submit" form="bidding">Submit Bid</button>
                     </form>
                 </div>
             {% endif %}
-
-        <!-- Closing/Opening auction -->
-        <!-- This block renders if the user is the listing's owner -->
-        {% else %}
+        {% endif %}
+        <!-- -------------------------------------------------- -->
+        <!-- CLOSING BID FORM -->
+        {% if user != None and user == listing.seller %}
             {% if bid %}
-                <div>
+                <div class="bidding-status-form">
                     <form action="{% url 'status' %}" method="post">
                         {% csrf_token %}
                         <input name="listing" type="hidden" value="{{ listing.id }}">
@@ -108,40 +99,52 @@
                         {% endif %}
                     </form>
                 </div>
-            <hr>
             {% endif %}
         {% endif %}
-    {% endif %}
-
-    <!-- Comments -->
-    {% if user != None %}
-        <div>
-            <!-- Creating a comment -->
-            <form action="{% url 'comments' %}" method="post">
-                {% csrf_token %}
-                {{ comment }}
-                <input name="listing" type="hidden" value="{{ listing.id }}">
-                <input name="submit-comment" type="submit" value="Publish comment">
-            </form>
-        </div>
-    {% endif %}
-
-    <div>
-        <hr>
-        <h3>Comments</h3>
-        <hr>
-        {% for comment in comments %}
-            <p>Date published: {{ comment.date_published }}</p>
-            <p>{{comment.author}}: {{ comment.content }}</p>
-            {% if comment.author == user %}
-                <form action="{% url 'listing' item_id=listing.id %}" method="post">
+        <!-- -------------------------------------------------- -->
+        <!-- COMMENT FORM -->
+        {% if user != None %}
+            <div class="comment-form">
+                <!-- Creating a comment -->
+                <form action="{% url 'comments' %}" method="post" id="comment">
                     {% csrf_token %}
-                    <input name="comment-pk" type="hidden" value="{{ comment.pk }}">
-                    <input name="delete-comment" type="submit" value="Delete">
+                    {{ comment }}
+                    <input name="listing" type="hidden" value="{{ listing.id }}">
+                    <button type="submit" form="comment">Publish</button>
                 </form>
-            {% endif %}
-            <hr>
+            </div>
+        {% endif %}
+        <!-- -------------------------------------------------- -->
+        <!-- COMMENTS -->
+        <div class="comments">
+            <h1>Comments</h1>
+            {% for comment in comments %}
+                <p>Date published: {{ comment.date_published }}</p>
+                <p>{{comment.author}}: {{ comment.content }}</p>
+                {% if comment.author == user %}
+                    <form action="{% url 'listing' item_id=listing.id %}" method="post">
+                        {% csrf_token %}
+                        <input name="comment-pk" type="hidden" value="{{ comment.pk }}">
+                        <input name="delete-comment" type="submit" value="Delete">
+                    </form>
+                {% endif %}
+                <hr>
+            {% endfor %}
+        </div>
+        <!-- -------------------------------------------------- -->
+    </div>
+
+    <div class="sidebar">
+        <h3>All listings</h3>
+        {% for listing in all_listings %}
+            <div class="sidebar-content">
+                <p><a href="{% url 'listing' item_id=listing.pk %}">{{ listing.title }}</a></p>
+                <img src="{{ listing.image }}" alt="item image">
+                <p>Starting bid: {{ listing.starting_bid }}</p>
+            </div>
         {% endfor %}
     </div>
+
+</div>
 
 {% endblock %}

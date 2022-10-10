@@ -6,12 +6,18 @@
 
 {% block body %}
 
-<h3>Listings</h3>
+<h3 class="page-title">{{ title }}</h3>
 
 {% for listing in group %}
+<div class="each-listing">
+    <p><a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></p>
+    <img src="{{ listing.image }}" alt="Image">
     <ul>
-        <li><a href="{% url 'listing' item_id=listing.pk %}">{{ listing.title }}</a></li>
+        <li>Description: {{ listing.description }}</li>
+        <li>Seller: {{listing.seller}}</li>
+        <li>Starting bid: {{ listing.starting_bid }}$</li>
     </ul>
+</div>
 {% endfor %}
 
 {% endblock %}

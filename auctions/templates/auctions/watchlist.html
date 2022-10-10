@@ -11,8 +11,15 @@
 
 <ul>
     {% for listing in watchlist %}
-        <li><a href="{% url 'listing' item_id=listing.id %}">{{ listing }}</a>
-        </li>
+    <div class="each-listing">
+        <p><a href="{% url 'listing' listing.pk %}">{{ listing.title }}</a></p>
+        <img src="{{ listing.image }}" alt="Image">
+        <ul>
+            <li>Description: {{ listing.description }}</li>
+            <li>Seller: {{listing.seller}}</li>
+            <li>Starting bid: {{ listing.starting_bid }}$</li>
+        </ul>
+    </div>
     {% endfor %}
 </ul>
 
