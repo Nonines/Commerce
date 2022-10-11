@@ -16,8 +16,8 @@
         <div class="listing-info">
             <h1>{{ listing.title}}</h1>
             <p>{{ listing.description }}</p>
-            <p>Seller: {{ listing.seller }}</p>
-            <p>Starting Bid: {{ listing.starting_bid }}</p>
+            <p>Listed by: {{ listing.seller }}</p>
+            <p>Starting Bid: ${{ listing.starting_bid }}</p>
             <p>Category: <a href="{% url 'a_category' listing.category %}">{{ listing.category }}</a></p>
             <p>Date created: {{ listing.date_created }}</p>
         </div>
@@ -27,7 +27,7 @@
             <div class="bid-info">
                 {% if bid.is_open is True %}
                     <div class="bid-open-status">
-                        <p>Latest Bid: {{ bid.offer }}</p>
+                        <p>Latest Bid: ${{ bid.offer }}</p>
                         <p>{{ bid.offer_count}} bid(s) so far. </p>
                     </div>
                     <div class="bid-open-bidder">
@@ -118,6 +118,7 @@
         <!-- COMMENTS -->
         <div class="comments">
             <h1>Comments</h1>
+            <hr>
             {% for comment in comments %}
                 <p>Date published: {{ comment.date_published }}</p>
                 <p>{{comment.author}}: {{ comment.content }}</p>
@@ -140,7 +141,7 @@
             <div class="sidebar-content">
                 <p><a href="{% url 'listing' item_id=listing.pk %}">{{ listing.title }}</a></p>
                 <img src="{{ listing.image }}" alt="item image">
-                <p>Starting bid: {{ listing.starting_bid }}</p>
+                <p>Starting bid: ${{ listing.starting_bid }}</p>
             </div>
         {% endfor %}
     </div>

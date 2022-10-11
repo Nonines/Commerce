@@ -13,9 +13,6 @@ from .forms import ListingForm, BidForm, CommentForm
 
 # Default page (displays all the listings):
 def index(request):
-    # When this view is called, retrieve all objects(data in database fields)
-    # from the Listing table by constructing a QuerySet, and passing it as
-    # context to the rendered template
     active_listings = Listing.objects.filter(active=True)
 
     return render(request,
@@ -106,6 +103,8 @@ def create_item(request):
             st_bid = form.cleaned_data["starting_bid"]
             image = form.cleaned_data["image"]
             category = form.cleaned_data["category"]
+            if category == "":
+                category = "Unspecified"
 
             # get the current user to set it as the seller
             user_id = request.user.id

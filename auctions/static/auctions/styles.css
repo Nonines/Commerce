@@ -50,7 +50,6 @@ button:focus {
 .main {
     grid-column-start: 1;
     grid-column-end: 2;
-    /* border: 1px solid grey; */
 
     display: grid;
     grid-template-columns: 0.5fr 1fr;
@@ -109,6 +108,7 @@ button:focus {
     grid-row-end: 5;
     grid-column-start: 1;
     grid-column-end: 3;
+    border-top: 1px solid #9a9ea1;
 }
 
 .comments {

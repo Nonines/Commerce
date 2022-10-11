@@ -20,8 +20,8 @@ class Listing(models.Model):
     title = models.CharField(max_length=32)
     description = models.TextField(max_length=64)
     starting_bid = models.PositiveIntegerField()
-    image = models.URLField()
-    category = models.CharField(max_length=24, null=True, blank=True)
+    image = models.URLField(blank=True)
+    category = models.CharField(max_length=24, blank=True)
 
     date_created = models.DateField(auto_now_add=True)
     active = models.BooleanField(default=True)

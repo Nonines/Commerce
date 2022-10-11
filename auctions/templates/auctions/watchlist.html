@@ -16,8 +16,8 @@
         <img src="{{ listing.image }}" alt="Image">
         <ul>
             <li>Description: {{ listing.description }}</li>
-            <li>Seller: {{listing.seller}}</li>
-            <li>Starting bid: {{ listing.starting_bid }}$</li>
+            <li>Listed by: {{listing.seller}}</li>
+            <li>Starting bid: ${{ listing.starting_bid }}</li>
         </ul>
     </div>
     {% endfor %}
